@@ -1,2 +1,1 @@
-# wookat.github.io
-blog
+＃ShyMin blog
