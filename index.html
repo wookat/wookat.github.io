@@ -61,7 +61,7 @@
             hearts.push(new Heart(e.clientX, e.clientY));
         }
     }
-/*
+
     var Heart = function(x,y){
         this.x = x || Math.random()*ww;
         this.y = y || Math.random()*wh;
@@ -103,54 +103,8 @@
         ctx.fill()
         ctx.restore();
     };
-*/
 
-        var Heart = function(x, y) {
-            this.x = x || Math.random() * ww;
-            this.y = y || -wh;
-            this.size = Math.random() * 2 + 1;
-            this.speedX = (Math.random() - 0.5) * 2;
-            this.speedY = (Math.random() + 0.2) * 8;
-            this.rotation = Math.random() * Math.PI * 2;
-            this.speedRotation = Math.random() * 0.02 - 0.01;
-            this.opacity = 1;
-            this.vertices = []; // 可以扩展用于更复杂形状
 
-            // 创建一个径向渐变以模拟花瓣的立体感
-            this.gradient = ctx.createRadialGradient(-this.size/2, -this.size/2, 0, 0, 0, this.size/2);
-            this.gradient.addColorStop(0, 'white');
-            this.gradient.addColorStop(0.5, 'lightpink');
-            this.gradient.addColorStop(1, 'pink');
-        }
-
-        Heart.prototype.updateOpacity = function() {
-            this.opacity -= 0.005; // 随着下降逐渐淡出
-            this.opacity = Math.max(0, this.opacity);
-        };
-
-        Heart.prototype.draw = function() {
-            this.y += this.speedY;
-            this.x += this.speedX;
-            this.rotation += this.speedRotation;
-            this.updateOpacity();
-
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.rotation);
-            ctx.fillStyle = this.gradient;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-            ctx.globalAlpha = this.opacity;
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-
-            // 当樱花瓣超出屏幕底部时，移除它
-            if (this.y > wh + this.size) {
-                hearts.splice(hearts.indexOf(this), 1);
-            }
-        };
-    
 
     function render(a){
         requestAnimationFrame(render);
