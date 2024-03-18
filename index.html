@@ -140,7 +140,17 @@ Heart.prototype.draw = function() {
     }
 };
 
+var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size / 2);
+gradient.addColorStop(0, 'white');
+gradient.addColorStop(1, 'lightpink');
 
+Heart.prototype.draw = function() {
+    // ...
+    ctx.fillStyle = gradient;
+    this.drawShape();
+    ctx.fill();
+    // ...
+};
     
 
     function render(a){
