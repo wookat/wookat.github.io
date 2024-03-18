@@ -49,7 +49,7 @@
     var precision = 100;
     var hearts = [];
     var mouseMoved = false;
-/*
+
     function onMove(e){
         mouseMoved = true;
         if(e.type === "touchmove"){
@@ -61,7 +61,7 @@
             hearts.push(new Heart(e.clientX, e.clientY));
         }
     }
-
+/*
     var Heart = function(x,y){
         this.x = x || Math.random()*ww;
         this.y = y || Math.random()*wh;
@@ -103,7 +103,45 @@
         ctx.fill()
         ctx.restore();
     };
+*/
 
+// 新增樱花构造函数
+var Heart = function(x, y) {
+    this.x = x || Math.random() * ww;
+    this.y = y || -wh; // 樱花从顶部开始下落
+    this.size = Math.random() * 2 + 1;
+    this.speedX = (Math.random() - 0.5) * 2; // 樱花横向飘动的速度
+    this.speedY = (Math.random() + 0.2) * 8; // 樱花垂直下落的速度
+    this.rotation = Math.random() * Math.PI * 2; // 初始旋转角度
+    this.speedRotation = Math.random() * 0.02 - 0.01; // 自旋速度
+    this.opacity = 1;
+    this.vertices = []; // 如果需要更复杂的形状，可以定义樱花瓣的顶点
+}
+
+Heart.prototype.draw = function() {
+    this.y += this.speedY;
+    this.rotation += this.speedRotation;
+    
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.fillStyle = "pink"; // 或者其他适合樱花的颜色
+    ctx.beginPath();
+    // 这里假设绘制一个简单的圆形作为樱花瓣
+    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+    ctx.globalAlpha = this.opacity;
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 当樱花瓣到达底部时，移除它
+    if (this.y > wh) {
+        hearts.splice(hearts.indexOf(this), 1);
+    }
+};
+
+
+    
 
     function render(a){
         requestAnimationFrame(render);
@@ -118,77 +156,15 @@
             }
         }
     }
-*/
-    //
-    // 创建樱花类
-    var CherryBlossom = function(x, y) {
-        this.x = x || Math.random() * ww;
-        this.y = y || -wh;
-        this.size = Math.random() * 2 + 1;
-        this.speedX = (Math.random() - 0.5) * 2;
-        this.speedY = (Math.random() + 0.2) * 8;
-        this.rotation = Math.random() * Math.PI * 2;
-        this.speedRotation = Math.random() * 0.02 - 0.01;
-        this.opacity = 1;
-    };
 
-    CherryBlossom.prototype.draw = function() {
-        this.y += this.speedY;
-        this.rotation += this.speedRotation;
-
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.rotation);
-        ctx.fillStyle = 'pink';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-        ctx.globalAlpha = this.opacity;
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-
-        if (this.y > wh) {
-            hearts.splice(hearts.indexOf(this), 1);
-        }
-    };
-
-    var hearts = [];
-    var mouseMoved = false;
-    canvas.addEventListener('mousemove', function(e) {
-        mouseMoved = true;
-        hearts.push(new Heart(e.clientX, e.clientY));
-        hearts.push(new Heart(e.clientX, e.clientY));
-        hearts.push(new CherryBlossom());
-        hearts.push(new CherryBlossom());
-    });
-
-    function render() {
-        ctx.clearRect(0, 0, ww, wh);
-
-        for (var i = 0; i < hearts.length; i++) {
-            if (hearts[i] instanceof Heart) {
-                hearts[i].draw();
-                // 爱心的生命周期处理...
-            } else if (hearts[i] instanceof CherryBlossom) {
-                hearts[i].draw();
-            }
-        }
-
-        requestAnimationFrame(render);
-    }
-
-    (function init() {
-        render();
-    })();
-    //
-
+  
 
     
     onResize();
     window.addEventListener("mousemove", onMove);
     window.addEventListener("touchmove", onMove);
     window.addEventListener("resize", onResize);
-    // requestAnimationFrame(render);
+    requestAnimationFrame(render);
 
     window.onload=function starttime(){
         time(h1,'2024,1,1');     // 在一起的时间
