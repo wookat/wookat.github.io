@@ -49,6 +49,7 @@
     var precision = 100;
     var hearts = [];
     var mouseMoved = false;
+/*
     function onMove(e){
         mouseMoved = true;
         if(e.type === "touchmove"){
@@ -117,13 +118,77 @@
             }
         }
     }
+*/
+    //
+    // 创建樱花类
+    var CherryBlossom = function(x, y) {
+        this.x = x || Math.random() * ww;
+        this.y = y || -wh;
+        this.size = Math.random() * 2 + 1;
+        this.speedX = (Math.random() - 0.5) * 2;
+        this.speedY = (Math.random() + 0.2) * 8;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.speedRotation = Math.random() * 0.02 - 0.01;
+        this.opacity = 1;
+    };
+
+    CherryBlossom.prototype.draw = function() {
+        this.y += this.speedY;
+        this.rotation += this.speedRotation;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillStyle = 'pink';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+        ctx.globalAlpha = this.opacity;
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        if (this.y > wh) {
+            hearts.splice(hearts.indexOf(this), 1);
+        }
+    };
+
+    var hearts = [];
+    var mouseMoved = false;
+    canvas.addEventListener('mousemove', function(e) {
+        mouseMoved = true;
+        hearts.push(new Heart(e.clientX, e.clientY));
+        hearts.push(new Heart(e.clientX, e.clientY));
+        hearts.push(new CherryBlossom());
+        hearts.push(new CherryBlossom());
+    });
+
+    function render() {
+        ctx.clearRect(0, 0, ww, wh);
+
+        for (var i = 0; i < hearts.length; i++) {
+            if (hearts[i] instanceof Heart) {
+                hearts[i].draw();
+                // 爱心的生命周期处理...
+            } else if (hearts[i] instanceof CherryBlossom) {
+                hearts[i].draw();
+            }
+        }
+
+        requestAnimationFrame(render);
+    }
+
+    (function init() {
+        render();
+    })();
+    //
 
 
+    
     onResize();
     window.addEventListener("mousemove", onMove);
     window.addEventListener("touchmove", onMove);
     window.addEventListener("resize", onResize);
-    requestAnimationFrame(render);
+    // requestAnimationFrame(render);
 
     window.onload=function starttime(){
         time(h1,'2024,1,1');     // 在一起的时间
