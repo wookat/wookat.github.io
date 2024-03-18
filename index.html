@@ -140,6 +140,15 @@ Heart.prototype.draw = function() {
     }
 };
 
+Heart.prototype.drawShape = function() {
+    ctx.beginPath();
+    ctx.moveTo(-this.size / 2, -this.size / 3); // 花瓣尖端
+    ctx.bezierCurveTo(-this.size / 2, -this.size / 1.5, this.size / 2, -this.size / 1.5, this.size / 2, 0); // 第一条边
+    ctx.bezierCurveTo(this.size / 2, this.size / 1.5, -this.size / 2, this.size / 1.5, -this.size / 2, this.size / 3); // 第二条边
+    // ... 依此类推，绘制剩余的花瓣部分
+    ctx.closePath();
+};
+    
 var gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size / 2);
 gradient.addColorStop(0, 'white');
 gradient.addColorStop(1, 'lightpink');
