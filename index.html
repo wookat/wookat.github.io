@@ -3,407 +3,444 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>交互式分析报告：自监督CoT生成方法</title>
+    <title>通用型在线Excel合并工具 (含动态可视化)</title>
+    <!-- 引入Tailwind CSS框架 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Warm Neutrals (Linen, Slate, Sage Green) -->
-    <!-- Application Structure Plan: A single-page application with a sticky sidebar for navigation. This thematic structure allows users to non-linearly explore the core concepts, bypassing the linear flow of a traditional report. The sections are: 1) Introduction, 2) An interactive diagram of the proposed method, 3) A "Novelty Compass" (Radar Chart) for dynamic comparison with existing works, 4) A visual "Core Risk Analysis", and 5) An interactive "Optimization Roadmap". This structure is chosen to transform passive reading into active exploration, making complex comparisons and future plans more digestible and engaging. -->
-    <!-- Visualization & Content Choices: 1. Method Deep Dive: Goal=Organize, Method=Interactive HTML/CSS diagram, Interaction=Click to reveal details, Justification=Visually breaks down the core mechanism. 2. Novelty Compass: Goal=Compare, Method=Chart.js Radar Chart, Interaction=Checkboxes to add/remove methods, Justification=Dynamically compares multiple methods across key dimensions, superior to a static table. 3. Core Risk Analysis: Goal=Inform, Method=HTML/CSS visual metaphor (balance scale) & text example, Interaction=Click to reveal flawed reasoning, Justification=Clearly illustrates the abstract concept of "correct answer, wrong reasoning". 4. Optimization Roadmap: Goal=Organize/Change, Method=Interactive HTML/CSS stepper, Interaction=Click to switch between tiers, Justification=Simplifies a complex, multi-stage plan into manageable steps. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <!-- 引入SheetJS/xlsx库用于处理Excel文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Noto Sans SC', sans-serif; scroll-behavior: smooth; }
-        .bg-linen { background-color: #FAF3E0; }
-        .bg-sage { background-color: #B2AC88; }
-        .text-slate { color: #334155; }
-        .border-slate-200 { border-color: #e2e8f0; }
-        .active-nav { background-color: #DCD6C0; color: #1e293b; font-weight: 500; }
-        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
-        @media (min-width: 768px) { .chart-container { height: 400px; } }
-        .step-item.active .step-circle { background-color: #64748b; color: white; }
-        .step-item.active .step-line { background-color: #64748b; }
-        .step-item .step-circle { transition: all 0.3s ease; }
+        .file-input-label { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0.75rem 1.5rem; border-radius: 0.5rem; background-color: #4f46e5; color: white; font-weight: 600; transition: background-color 0.2s; }
+        .file-input-label:hover { background-color: #4338ca; }
+        input[type="file"] { display: none; }
+        .disabled-btn { background-color: #9ca3af; cursor: not-allowed; }
+        .config-section { display: none; }
+        .table-select { width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background-color: white; }
+        /* 可视化字段样式 */
+        .field-box { 
+            background-color: white; 
+            border: 1px solid #e5e7eb; 
+            border-radius: 0.375rem; 
+            padding: 0.5rem 0.75rem; 
+            margin: 0 auto 0.5rem auto; /* 自动居中并保持底部边距 */
+            font-size: 0.875rem; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap;
+            max-width: 90%; /* **UPDATED**: 缩小宽度 */
+            min-height: 38px; /* 确保占位符和实体块高度一致 */
+        }
+        .field-box.source-1 { border-left: 4px solid #3b82f6; }
+        .field-box.source-2 { border-left: 4px solid #10b981; }
+        .field-box.target { border-left: 4px solid #8b5cf6; border-right: 4px solid #8b5cf6;}
+        .connector-line { stroke-width: 2; fill: none; stroke-linecap: round; opacity: 0.8; }
     </style>
 </head>
-<body class="bg-linen text-slate">
-
-    <div class="flex flex-col md:flex-row min-h-screen">
-        <!-- Sidebar Navigation -->
-        <aside class="w-full md:w-64 bg-white/50 backdrop-blur-sm border-r border-slate-200 p-4 md:p-6 md:sticky md:top-0 md:h-screen shadow-md md:shadow-none">
-            <h1 class="text-xl font-bold mb-6 text-slate-800">分析导航</h1>
-            <nav>
-                <ul class="space-y-2">
-                    <li><a href="#introduction" class="block py-2 px-4 rounded-lg hover:bg-stone-200 transition-colors duration-200 nav-link">引言与定位</a></li>
-                    <li><a href="#method-deep-dive" class="block py-2 px-4 rounded-lg hover:bg-stone-200 transition-colors duration-200 nav-link">方法深度解析</a></li>
-                    <li><a href="#novelty-compass" class="block py-2 px-4 rounded-lg hover:bg-stone-200 transition-colors duration-200 nav-link">新颖性罗盘</a></li>
-                    <li><a href="#risk-analysis" class="block py-2 px-4 rounded-lg hover:bg-stone-200 transition-colors duration-200 nav-link">核心风险透视</a></li>
-                    <li><a href="#optimization-roadmap" class="block py-2 px-4 rounded-lg hover:bg-stone-200 transition-colors duration-200 nav-link">优化与增强路线图</a></li>
-                    <li><a href="#conclusion" class="block py-2 px-4 rounded-lg hover:bg-stone-200 transition-colors duration-200 nav-link">结论与战略建议</a></li>
-                </ul>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 p-4 md:p-10">
-            <header class="text-center mb-16">
-                <h1 class="text-4xl md:text-5xl font-bold text-slate-800">面向潜在推理能力引导的自监督思维链生成方法</h1>
-                <p class="mt-4 text-lg text-slate-600">一份交互式分析与优化路径报告</p>
-            </header>
-
-            <section id="introduction" class="mb-16 scroll-mt-20">
-                <h2 class="text-3xl font-bold text-slate-700 border-b-2 border-sage pb-2 mb-6">引言与定位</h2>
-                <div class="space-y-4 text-slate-600 text-lg leading-relaxed">
-                    <p>大规模语言模型（LLM）内化了丰富的知识与逻辑能力，但如何将其隐式的推理过程“外化”为显式的思维链（CoT），是提升其作为可靠问题解决系统能力的关键挑战。本报告旨在分析一种仅利用“问题-答案”对进行训练的自监督CoT生成方法，探讨其创新性、固有风险，并规划一条系统性的优化路径。</p>
-                    <p>我们将该方法置于“过程监督”与“结果监督”的光谱中进行定位。它完全属于后者，利用最终答案的正确性作为唯一的、可大规模获取的弱监督信号，但这也带来了“答案正确，推理错误”的核心风险。本应用将通过交互式组件，帮助您深入理解这一方法的机制、挑战与未来潜力。</p>
+<body class="bg-gray-100 font-sans antialiased">
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-6 sm:p-8">
+                <!-- 标题 -->
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800">通用型在线Excel合并工具</h1>
+                    <p class="mt-2 text-gray-600">自定义合并规则，并通过实时可视化预览映射关系。</p>
                 </div>
-            </section>
 
-            <section id="method-deep-dive" class="mb-16 scroll-mt-20">
-                <h2 class="text-3xl font-bold text-slate-700 border-b-2 border-sage pb-2 mb-6">方法深度解析</h2>
-                 <p class="mb-8 text-slate-600 text-lg leading-relaxed">该方法的核心在于一个精巧的单阶段训练流程，它引导模型生成推理，但仅根据最终答案的正确性来更新模型。下方的交互式图解展示了其工作原理。您可以点击图中的关键组件来查看详细解释。</p>
-                <div class="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
-                    <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 text-center">
-                        <div class="p-4 bg-blue-50 rounded-lg w-full md:w-1/4">
-                            <span class="text-sm font-semibold text-blue-500">输入</span>
-                            <p class="font-bold text-slate-700 mt-1">问题 (Q)</p>
-                        </div>
-                        <div class="text-2xl text-slate-400 font-sans">&rarr;</div>
-                        <div id="fcp-box" class="p-4 bg-purple-50 rounded-lg w-full md:w-2/4 cursor-pointer hover:shadow-md transition-shadow" onclick="toggleExplanation('fcp-exp')">
-                            <span class="text-sm font-semibold text-purple-500">模型生成过程</span>
-                            <p class="font-bold text-slate-700 mt-1">强制思考提示 (FCP) + 推理序列 &lt;T&gt;</p>
-                             <p class="font-bold text-slate-700 mt-1">+ 答案序列 &lt;IA&gt;</p>
-                        </div>
-                         <div class="text-2xl text-slate-400 font-sans">&rarr;</div>
-                        <div id="loss-box" class="p-4 bg-green-50 rounded-lg w-full md:w-1/4 cursor-pointer hover:shadow-md transition-shadow" onclick="toggleExplanation('loss-exp')">
-                             <span class="text-sm font-semibold text-green-500">监督信号</span>
-                            <p class="font-bold text-slate-700 mt-1">选择性损失计算</p>
-                        </div>
-                    </div>
-                    <div id="fcp-exp" class="hidden mt-6 p-4 bg-purple-50 border-l-4 border-purple-400">
-                        <h4 class="font-bold text-purple-800">强制思考提示 (Forced CoT Prompt)</h4>
-                        <p class="text-purple-700 mt-2">这是一个关键的引导性前缀，如“让我一步步地解决这个问题”。它的作用是显式地指令模型，在给出最终结论前必须先生成一段中间思考过程，从而“强制”其外化推理。</p>
-                    </div>
-                    <div id="loss-exp" class="hidden mt-6 p-4 bg-green-50 border-l-4 border-green-400">
-                        <h4 class="font-bold text-green-800">选择性损失计算 (Selective Loss)</h4>
-                        <p class="text-green-700 mt-2">这是该方法的核心创新。在计算损失时，通过损失掩码技术，模型生成的推理序列`<T>`所对应的损失被完全忽略（不产生梯度）。损失的计算仅限于模型生成的答案序列`<IA>`与标准答案`<GA>`之间的差异。这给予了模型在“如何思考”上的充分自由，而仅通过最终结果的正确性来引导其学习。</p>
-                    </div>
+                <!-- 步骤1: 上传文件 -->
+                <h2 class="text-xl font-bold text-gray-700 mb-4 border-l-4 border-indigo-500 pl-3">步骤 1: 上传文件</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- 卡片们 -->
+                    <div id="card-source1" class="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center transition-all duration-300"><h3 class="font-semibold text-lg text-gray-700 mb-2">源文件 1</h3><label for="source1File" class="file-input-label">选择文件</label><input type="file" id="source1File" accept=".xlsx, .xls"><p id="source1FileName" class="mt-3 text-sm text-green-600 font-medium"></p></div>
+                    <div id="card-source2" class="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center transition-all duration-300"><h3 class="font-semibold text-lg text-gray-700 mb-2">源文件 2</h3><label for="source2File" class="file-input-label">选择文件</label><input type="file" id="source2File" accept=".xlsx, .xls"><p id="source2FileName" class="mt-3 text-sm text-green-600 font-medium"></p></div>
+                    <div id="card-template" class="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center transition-all duration-300"><h3 class="font-semibold text-lg text-gray-700 mb-2">目标模板</h3><label for="templateFile" class="file-input-label">选择文件</label><input type="file" id="templateFile" accept=".xlsx, .xls"><p id="templateFileName" class="mt-3 text-sm text-green-600 font-medium"></p></div>
                 </div>
-            </section>
 
-            <section id="novelty-compass" class="mb-16 scroll-mt-20">
-                <h2 class="text-3xl font-bold text-slate-700 border-b-2 border-sage pb-2 mb-6">新颖性罗盘</h2>
-                <p class="mb-8 text-slate-600 text-lg leading-relaxed">该方法并非孤立存在。下方的“新颖性罗盘”可让您动态地将其与STaR、Self-Consistency等相关前沿工作进行多维度比较。请勾选您想比较的方法，观察它们在不同维度上的优劣势。</p>
-                <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 border border-slate-200">
-                    <div class="chart-container h-[40vh] md:h-96 max-h-[500px]">
-                        <canvas id="noveltyChart"></canvas>
-                    </div>
-                    <div id="method-checkboxes" class="mt-8 flex flex-wrap justify-center gap-4"></div>
-                </div>
-            </section>
-
-            <section id="risk-analysis" class="mb-16 scroll-mt-20">
-                <h2 class="text-3xl font-bold text-slate-700 border-b-2 border-sage pb-2 mb-6">核心风险透视</h2>
-                <p class="mb-8 text-slate-600 text-lg leading-relaxed">纯粹的结果监督虽然可扩展性强，但其核心风险在于“答案正确，推理错误”。模型可能因为偶然或错误的推理得到正确答案，但依然获得正向激励，这使得学习过程不可靠。</p>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
-                        <h3 class="text-xl font-bold text-center text-slate-800 mb-4">监督范式的权衡</h3>
-                        <div class="flex items-center justify-center space-x-4">
-                            <div class="text-center">
-                                <p class="font-bold text-blue-600">过程监督</p>
-                                <p class="text-sm">高精度</p>
-                                <p class="text-sm">低可扩展性</p>
-                            </div>
-                            <div class="text-5xl font-thin text-slate-400 scale-x-150">~</div>
-                             <div class="text-center">
-                                <p class="font-bold text-green-600">结果监督</p>
-                                <p class="text-sm">低精度</p>
-                                <p class="text-sm">高可扩展性</p>
-                            </div>
-                        </div>
-                        <p class="mt-6 text-center text-sm text-slate-500">该方法选择了天平的右端，以牺牲监督精度为代价换取极高的可扩展性。</p>
-                    </div>
-                     <div class="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
-                        <h3 class="text-xl font-bold text-center text-slate-800 mb-4">风险实例：伪阳性解决方案</h3>
-                        <div class="bg-amber-50 p-4 rounded-lg">
-                            <p class="font-mono text-slate-700"><strong class="text-amber-800">问题:</strong> 篮子里有5个苹果，小明拿走2个，又放回1个，现在有几个？</p>
-                            <p class="font-mono text-slate-700 mt-2"><strong class="text-amber-800">正确答案:</strong> 4</p>
-                            <button onclick="revealReasoning()" class="mt-4 bg-amber-200 text-amber-800 font-bold py-2 px-4 rounded-lg hover:bg-amber-300 transition">点击揭示一种可能的错误推理</button>
-                            <div id="wrong-reasoning" class="hidden mt-4 p-4 bg-red-50 border-l-4 border-red-400">
-                                <p class="font-mono text-red-700"><strong class="text-red-900">模型的错误推理:</strong> 5个苹果是奇数，2是偶数，1是奇数。奇数-偶数=奇数，奇数+奇数=偶数。答案是一个小于5的偶数，所以是4。</p>
-                                <p class="text-red-800 mt-2 text-sm font-semibold">此推理逻辑完全错误，但碰巧得出了正确答案。在结果监督下，这个错误的推理路径会被强化。</p>
-                            </div>
+                <!-- 步骤2: 配置合并规则 -->
+                <div id="config-section" class="config-section mb-8">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4 border-l-4 border-indigo-500 pl-3">步骤 2: 配置合并规则</h2>
+                    <div class="bg-slate-50 p-6 rounded-lg">
+                        <!-- **UPDATED**: Replaced input with select -->
+                        <div class="mb-6"><label for="mergeKeySelect" class="block text-md font-medium text-gray-800 mb-2">选择合并主键 (已自动推荐可靠主键)</label><select id="mergeKeySelect" class="w-full md:w-1/2 p-2 border border-gray-300 rounded-md bg-white"></select></div>
+                        <div>
+                            <h3 class="text-md font-medium text-gray-800 mb-3">定义字段映射关系 (已自动匹配同名字段)</h3>
+                            <div class="overflow-x-auto"><table class="min-w-full bg-white border"><thead class="bg-gray-200"><tr><th class="text-left py-2 px-3">目标模板字段</th><th class="text-left py-2 px-3">映射到 源文件 1</th><th class="text-left py-2 px-3">映射到 源文件 2</th><th class="text-left py-2 px-3">数据源优先级</th></tr></thead><tbody id="mapping-table-body"></tbody></table></div>
                         </div>
                     </div>
                 </div>
-            </section>
-
-            <section id="optimization-roadmap" class="mb-16 scroll-mt-20">
-                <h2 class="text-3xl font-bold text-slate-700 border-b-2 border-sage pb-2 mb-6">优化与增强路线图</h2>
-                <p class="mb-8 text-slate-600 text-lg leading-relaxed">为了系统性地解决上述风险，我们设计了一个三层递进的优化路线图。点击下方的步骤来探索每个阶段的策略。</p>
-                <div class="flex flex-col md:flex-row gap-8">
-                    <!-- Stepper Navigation -->
-                    <div class="w-full md:w-1/3">
-                        <div id="stepper" class="space-y-4">
-                           <!-- Steps will be generated by JS -->
-                        </div>
-                    </div>
-                    <!-- Stepper Content -->
-                    <div id="roadmap-content-container" class="w-full md:w-2/3 bg-white rounded-xl shadow-lg p-8 border border-slate-200 min-h-[300px]">
-                        <!-- Content will be generated by JS -->
+                
+                <!-- 步骤3: 可视化预览 -->
+                <div id="visualization-section" class="config-section mb-8">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4 border-l-4 border-indigo-500 pl-3">步骤 3: 可视化预览</h2>
+                    <div id="mapping-container" class="relative grid grid-cols-3 gap-4 text-sm bg-slate-50 p-6 rounded-lg">
+                        <div class="space-y-2"><h3 class="font-bold mb-2 text-center text-blue-600">源文件 1 字段</h3><div id="vis-col-source1"></div></div>
+                        <div class="space-y-2"><h3 class="font-bold mb-2 text-center text-purple-600">目标模板字段</h3><div id="vis-col-template"></div></div>
+                        <div class="space-y-2"><h3 class="font-bold mb-2 text-center text-green-600">源文件 2 字段</h3><div id="vis-col-source2"></div></div>
+                        <svg id="mapping-svg" class="absolute top-0 left-0 w-full h-full" style="pointer-events: none;"></svg>
                     </div>
                 </div>
-            </section>
-            
-            <section id="conclusion" class="scroll-mt-20">
-                <h2 class="text-3xl font-bold text-slate-700 border-b-2 border-sage pb-2 mb-6">结论与战略建议</h2>
-                <div class="space-y-4 text-slate-600 text-lg leading-relaxed bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-                    <p><strong>关于新颖性：</strong>该方法的核心思想（从Q-A对自举CoT能力）与STaR等先例一致，其主要新颖性在于采用“在线损失掩码”替代“离线数据集策展”，这可能带来训练效率的提升，但有待实证。</p>
-                    <p><strong>关于核心挑战：</strong>该方法继承了结果监督的固有风险，最突出的是“答案正确但推理错误”的问题，这会导致模型学习到伪逻辑，损害其可靠性。</p>
-                    <p><strong>战略性建议：</strong>我们建议遵循一个分阶段的路线图：首先，通过消融实验严格验证损失掩码机制的有效性；其次，集成自洽性与启发式过滤等低成本策略来稳定训练；然后，采用DPO等强化学习范式进行现代化升级；最后，探索训练过程奖励模型（PRM）以实现更精细的自动化过程监督。</p>
-                </div>
-            </section>
 
-        </main>
+                <!-- 步骤4: 执行合并 -->
+                <div id="merge-section" class="config-section text-center">
+                     <h2 class="text-xl font-bold text-gray-700 mb-4 border-l-4 border-indigo-500 pl-3">步骤 4: 生成文件</h2>
+                    <button id="mergeBtn" class="w-full md:w-1/2 bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-green-700 transition-all duration-300 shadow-md disabled-btn" disabled>开始合并并下载</button>
+                    <p id="status" class="mt-4 text-gray-600 h-6"></p>
+                </div>
+            </div>
+        </div>
+        <footer class="text-center mt-8 text-sm text-gray-500"><p>&copy; 2024 通用型在线Excel合并工具。所有文件处理均在您的浏览器本地完成。</p></footer>
     </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // --- Data ---
-    const noveltyData = {
-        labels: ['训练效率', '监督精度', '实现复杂度', '推理可靠性', '可扩展性'],
-        datasets: [
-            {
-                label: '您的方法',
-                data: [4, 2, 2, 2, 5],
-                borderColor: 'rgba(239, 68, 68, 1)',
-                backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                pointBackgroundColor: 'rgba(239, 68, 68, 1)',
-                hidden: false,
-            },
-            {
-                label: 'STaR',
-                data: [2, 2, 4, 3, 5],
-                borderColor: 'rgba(59, 130, 246, 1)',
-                backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                hidden: false,
-            },
-            {
-                label: 'Self-Consistency',
-                data: [5, 3, 1, 4, 3],
-                borderColor: 'rgba(34, 197, 94, 1)',
-                backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                pointBackgroundColor: 'rgba(34, 197, 94, 1)',
-                hidden: true,
-            },
-            {
-                label: '过程监督',
-                data: [1, 5, 5, 5, 1],
-                borderColor: 'rgba(168, 85, 247, 1)',
-                backgroundColor: 'rgba(168, 85, 247, 0.2)',
-                pointBackgroundColor: 'rgba(168, 85, 247, 1)',
-                hidden: true,
-            }
-        ]
-    };
+    <script>
+        // --- 全局状态 ---
+        const fileInputs = { source1: document.getElementById('source1File'), source2: document.getElementById('source2File'), template: document.getElementById('templateFile') };
+        const fileData = { source1: null, source2: null, template: null };
+        const fileHeaders = { source1: [], source2: [], template: [] };
 
-    const roadmapData = [
-        {
-            title: "第一层：即时增强",
-            complexity: "低",
-            content: `
-                <h4 class="text-xl font-bold text-slate-800">策略</h4>
-                <ul class="list-disc pl-5 mt-4 space-y-2 text-slate-600">
-                    <li><strong>在训练中集成自洽性:</strong> 为同一个问题生成k个推理路径，通过多数投票确定“共识答案”，仅用导向正确共识答案的路径进行更新，以平滑和净化高方差的训练信号。</li>
-                    <li><strong>引入理由质量的启发式过滤:</strong> 在应用损失前，通过自动化规则（如长度、关键词检查）剔除明显无意义的推理过程，进一步降低训练信号的噪声。</li>
-                </ul>
-                <p class="mt-4 text-sm font-semibold text-green-600">目标：以较低成本快速稳定训练过程，提升信号质量。</p>
-            `
-        },
-        {
-            title: "第二层：向强化学习过渡",
-            complexity: "中",
-            content: `
-                <h4 class="text-xl font-bold text-slate-800">策略</h4>
-                <ul class="list-disc pl-5 mt-4 space-y-2 text-slate-600">
-                    <li><strong>框架化为RL问题:</strong> 将LLM作为策略网络，生成序列为行动，最终答案正确性作为稀疏奖励。</li>
-                    <li><strong>采用直接偏好优化 (DPO):</strong> 将导向正确答案的路径作为“采纳”轨迹，错误答案的路径作为“拒绝”轨迹，构建偏好对直接优化策略模型。这比传统的RLHF更稳定、高效。</li>
-                </ul>
-                 <p class="mt-4 text-sm font-semibold text-blue-600">目标：从“过滤式学习”升级为“策略优化”，更有效地从稀疏奖励中学习。</p>
-            `
-        },
-        {
-            title: "第三层：高级理由监督",
-            complexity: "高",
-            content: `
-                 <h4 class="text-xl font-bold text-slate-800">策略</h4>
-                <ul class="list-disc pl-5 mt-4 space-y-2 text-slate-600">
-                    <li><strong>训练理由验证器/奖励模型 (PRM):</strong> 训练一个独立的模型，专门评估推理序列本身的质量，给出连续分数，而非二元0/1奖励。</li>
-                    <li><strong>PRM训练数据来源:</strong> 可通过更强的“教师模型”进行模型蒸馏，或使用蒙特卡洛树搜索进行价值估计，以自监督方式生成训练数据。</li>
-                </ul>
-                <p class="mt-4 text-sm font-semibold text-purple-600">目标：从结果监督迈向合成的、自动化的过程监督，从根本上解决“答案正确，推理错误”的问题。</p>
-            `
-        }
-    ];
+        // --- DOM 元素 ---
+        const mergeBtn = document.getElementById('mergeBtn');
+        const statusEl = document.getElementById('status');
+        const configSections = document.querySelectorAll('.config-section');
 
-    // --- Chart.js ---
-    const ctx = document.getElementById('noveltyChart').getContext('2d');
-    const noveltyChart = new Chart(ctx, {
-        type: 'radar',
-        data: noveltyData,
-        options: {
-            maintainAspectRatio: false,
-            responsive: true,
-            scales: {
-                r: {
-                    angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' },
-                    pointLabels: { font: { size: 14 }, color: '#334155' },
-                    ticks: { beginAtZero: true, max: 5, stepSize: 1, backdropColor: 'rgba(255, 255, 255, 0.75)' }
-                }
-            },
-            plugins: {
-                legend: { display: true, position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.r !== null) {
-                                label += context.parsed.r;
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
+        // --- 事件监听 ---
+        Object.keys(fileInputs).forEach(key => fileInputs[key].addEventListener('change', (e) => handleFileSelect(e, key)));
+        mergeBtn.addEventListener('click', handleMerge);
+        window.addEventListener('resize', () => { if(fileData.template) updateVisualization(); });
 
-    const checkboxContainer = document.getElementById('method-checkboxes');
-    noveltyData.datasets.forEach((dataset, index) => {
-        const div = document.createElement('div');
-        div.classList.add('flex', 'items-center');
-        
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.id = `method-${index}`;
-        input.checked = !dataset.hidden;
-        input.classList.add('h-4', 'w-4', 'rounded', 'border-gray-300', 'text-indigo-600', 'focus:ring-indigo-500');
-        input.onchange = () => {
-            noveltyChart.data.datasets[index].hidden = !input.checked;
-            noveltyChart.update();
-        };
-
-        const label = document.createElement('label');
-        label.htmlFor = `method-${index}`;
-        label.textContent = dataset.label;
-        label.classList.add('ml-2', 'block', 'text-sm', 'text-gray-900');
-        
-        div.appendChild(input);
-        div.appendChild(label);
-        checkboxContainer.appendChild(div);
-    });
-
-    // --- Interactive Explanations ---
-    window.toggleExplanation = (id) => {
-        const el = document.getElementById(id);
-        el.classList.toggle('hidden');
-    };
-    
-    window.revealReasoning = () => {
-        const el = document.getElementById('wrong-reasoning');
-        el.classList.remove('hidden');
-    };
-    
-    // --- Roadmap Stepper ---
-    const stepperContainer = document.getElementById('stepper');
-    const contentContainer = document.getElementById('roadmap-content-container');
-
-    roadmapData.forEach((step, index) => {
-        const isFirst = index === 0;
-        const isLast = index === roadmapData.length - 1;
-
-        const stepItem = document.createElement('div');
-        stepItem.classList.add('flex', 'items-center', 'step-item', 'cursor-pointer');
-        if (isFirst) stepItem.classList.add('active');
-        stepItem.onclick = () => showRoadmapStep(index);
-
-        const circleDiv = document.createElement('div');
-        circleDiv.classList.add('flex-shrink-0');
-        
-        const circle = document.createElement('div');
-        circle.classList.add('w-8', 'h-8', 'rounded-full', 'flex', 'items-center', 'justify-center', 'font-bold', 'step-circle', 'bg-slate-200', 'text-slate-600');
-        circle.textContent = index + 1;
-        
-        circleDiv.appendChild(circle);
-
-        const lineAndText = document.createElement('div');
-        lineAndText.classList.add('flex-grow', 'ml-4');
-        
-        if (!isLast) {
-            const line = document.createElement('div');
-            line.classList.add('h-0.5', 'w-full', 'bg-slate-200', 'mb-1', 'step-line');
-            lineAndText.appendChild(line);
+        // --- 函数定义 ---
+        /** 读取Excel文件并提取数据和表头 */
+        function readExcel(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : (XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] || []);
+                        resolve({ data: jsonData, headers });
+                    } catch (err) { reject(new Error(`解析文件 "${file.name}" 失败: ${err.message}`)); }
+                };
+                reader.onerror = () => reject(new Error(`读取文件 "${file.name}" 失败.`));
+                reader.readAsArrayBuffer(file);
+            });
         }
 
-        const title = document.createElement('h4');
-        title.classList.add('font-bold', 'text-slate-700');
-        title.textContent = step.title;
-
-        const complexity = document.createElement('p');
-        complexity.classList.add('text-sm', 'text-slate-500');
-        complexity.textContent = `复杂度: ${step.complexity}`;
-
-        lineAndText.appendChild(title);
-        lineAndText.appendChild(complexity);
-
-        stepItem.appendChild(circleDiv);
-        stepItem.appendChild(lineAndText);
-        
-        stepperContainer.appendChild(stepItem);
-    });
-
-    window.showRoadmapStep = (index) => {
-        document.querySelectorAll('.step-item').forEach((item, i) => {
-            if (i === index) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
+        /** 处理文件选择 */
+        async function handleFileSelect(event, key) {
+            const file = event.target.files[0];
+            const card = document.getElementById(`card-${key}`);
+            const fileNameEl = document.getElementById(`${key}FileName`);
+            if (!file) {
+                fileNameEl.textContent = '';
+                card.classList.remove('border-green-500', 'bg-green-50');
+                return;
             }
-        });
-        contentContainer.innerHTML = roadmapData[index].content;
-    };
-    
-    showRoadmapStep(0); // Show initial step
+            fileNameEl.textContent = '读取中...';
+            card.classList.add('border-yellow-500');
+            try {
+                const { data, headers } = await readExcel(file);
+                fileData[key] = data;
+                fileHeaders[key] = headers;
+                fileNameEl.textContent = file.name;
+                card.classList.remove('border-yellow-500', 'border-gray-300');
+                card.classList.add('border-green-500', 'bg-green-50');
+                checkAllFilesUploaded();
+            } catch (error) {
+                statusEl.textContent = error.message;
+                statusEl.className = 'mt-4 text-red-600 h-6';
+                fileNameEl.textContent = '读取失败';
+                card.classList.remove('border-yellow-500', 'border-green-500');
+                card.classList.add('border-red-500');
+            }
+        }
+        
+        /** 检查所有文件是否上传完毕 */
+        function checkAllFilesUploaded() {
+            if (fileData.source1 && fileData.source2 && fileData.template) {
+                setupConfigUI();
+            }
+        }
 
-    // --- Active Nav Link on Scroll ---
-    const sections = document.querySelectorAll('section');
-    const navLinks = document.querySelectorAll('.nav-link');
+        /** 设置配置UI界面 */
+        function setupConfigUI() {
+            configSections.forEach(s => s.style.display = 'block');
+            mergeBtn.disabled = false;
+            mergeBtn.classList.remove('disabled-btn');
+            statusEl.textContent = '请配置合并规则后，点击按钮开始合并。';
+            statusEl.className = 'mt-4 text-blue-600 h-6';
 
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                navLinks.forEach(link => {
-                    link.classList.remove('active-nav');
-                    if (link.getAttribute('href').substring(1) === entry.target.id) {
-                        link.classList.add('active-nav');
-                    }
+            // **UPDATED**: Smart primary key detection and population into a <select> element
+            const commonHeaders = fileHeaders.source1.filter(h => fileHeaders.source2.includes(h));
+            const candidateKeys = commonHeaders.filter(h => {
+                const isKeyValidInSource1 = fileData.source1.every(row => row[h] !== null && row[h] !== undefined && String(row[h]).trim() !== '');
+                const isKeyValidInSource2 = fileData.source2.every(row => row[h] !== null && row[h] !== undefined && String(row[h]).trim() !== '');
+                return isKeyValidInSource1 && isKeyValidInSource2;
+            });
+
+            const selectEl = document.getElementById('mergeKeySelect');
+            selectEl.innerHTML = ''; // Clear previous options
+            if (candidateKeys.length > 0) {
+                candidateKeys.forEach(h => {
+                    const option = document.createElement('option');
+                    option.value = h;
+                    option.textContent = h;
+                    selectEl.appendChild(option);
                 });
+            } else {
+                // If no reliable keys, populate with all common headers as a fallback
+                const fallbackOption = document.createElement('option');
+                fallbackOption.value = "";
+                fallbackOption.textContent = "未找到可靠主键，请手动选择";
+                selectEl.appendChild(fallbackOption);
+                commonHeaders.forEach(h => {
+                    const option = document.createElement('option');
+                    option.value = h;
+                    option.textContent = h + " (可能含空值)";
+                    selectEl.appendChild(option);
+                });
+                statusEl.textContent = '警告: 未找到可靠的合并主键 (在两表中都存在且无空值)。请手动选择。';
+                statusEl.className = 'mt-4 text-orange-600 h-6';
             }
-        });
-    }, { rootMargin: '-50% 0px -50% 0px' });
 
-    sections.forEach(section => {
-        observer.observe(section);
-    });
+            setupMappingTable();
+            updateVisualization();
+        }
 
-});
-</script>
+        /** 设置映射表格 */
+        function setupMappingTable() {
+            const tableBody = document.getElementById('mapping-table-body');
+            tableBody.innerHTML = '';
+            fileHeaders.template.forEach(targetHeader => {
+                const row = document.createElement('tr');
+                row.className = 'border-t';
+                row.innerHTML = `<td class="py-2 px-3 font-medium">${targetHeader}</td>`;
+                ['source1', 'source2'].forEach(sourceKey => {
+                    const td = document.createElement('td');
+                    td.className = 'py-2 px-3';
+                    const select = createSelect(fileHeaders[sourceKey], targetHeader);
+                    select.addEventListener('change', updateVisualization);
+                    td.appendChild(select);
+                    row.appendChild(td);
+                });
+                
+                const priorityTd = document.createElement('td');
+                priorityTd.className = 'py-2 px-3';
+                const prioritySelect = document.createElement('select');
+                prioritySelect.className = 'table-select priority-select';
+                prioritySelect.innerHTML = `<option value="source2">优先 源文件 2</option><option value="source1">优先 源文件 1</option>`;
+                priorityTd.appendChild(prioritySelect);
+                row.appendChild(priorityTd);
 
+                tableBody.appendChild(row);
+            });
+        }
+        
+        /** 创建下拉选择框 */
+        function createSelect(headers, targetHeader) {
+            const select = document.createElement('select');
+            select.className = 'table-select';
+            select.innerHTML = `<option value="">-- 不映射 --</option>`;
+            headers.forEach(h => {
+                const option = document.createElement('option');
+                option.value = h;
+                option.textContent = h;
+                if (h === targetHeader) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            return select;
+        }
+
+        /** 更新整个可视化区域（字段块和连接线） */
+        function updateVisualization() {
+            redrawFieldBoxes();
+            drawAllConnections();
+        }
+
+        /** 重绘所有字段块以实现对齐 */
+        function redrawFieldBoxes() {
+            const visCols = {
+                source1: document.getElementById('vis-col-source1'),
+                template: document.getElementById('vis-col-template'),
+                source2: document.getElementById('vis-col-source2'),
+            };
+            Object.values(visCols).forEach(col => col.innerHTML = ''); // 清空所有列
+
+            const mappingRows = document.getElementById('mapping-table-body').rows;
+
+            for (const row of mappingRows) {
+                const targetHeader = row.cells[0].textContent;
+                const source1Mapping = row.cells[1].querySelector('select').value;
+                const source2Mapping = row.cells[2].querySelector('select').value;
+
+                const targetBox = createFieldBox('template', targetHeader);
+                visCols.template.appendChild(targetBox);
+
+                const source1Box = source1Mapping ? createFieldBox('source1', source1Mapping) : createPlaceholder();
+                visCols.source1.appendChild(source1Box);
+
+                const source2Box = source2Mapping ? createFieldBox('source2', source2Mapping) : createPlaceholder();
+                visCols.source2.appendChild(source2Box);
+            }
+        }
+
+        /** 创建单个字段块的辅助函数 */
+        function createFieldBox(type, header) {
+            const div = document.createElement('div');
+            let className = 'field-box';
+            if (type === 'source1') className += ' source-1';
+            else if (type === 'source2') className += ' source-2';
+            else if (type === 'template') className += ' target';
+            
+            div.className = className;
+            div.id = `vis-${type}-${header}`;
+            div.textContent = header;
+            div.title = header;
+            return div;
+        }
+
+        /** 创建占位符以保持对齐 */
+        function createPlaceholder() {
+            const div = document.createElement('div');
+            div.className = 'field-box invisible'; // `invisible` 使其不显示但仍占据空间
+            return div;
+        }
+
+        /** 绘制所有连接线 */
+        function drawAllConnections() {
+            const svg = document.getElementById('mapping-svg');
+            if (!svg) return;
+            svg.innerHTML = '';
+            const rows = document.getElementById('mapping-table-body').rows;
+
+            for (const row of rows) {
+                const targetHeader = row.cells[0].textContent;
+                const source1Mapping = row.cells[1].querySelector('select').value;
+                const source2Mapping = row.cells[2].querySelector('select').value;
+                
+                const toEl = document.getElementById(`vis-template-${targetHeader}`);
+                if (!toEl) continue;
+
+                if (source1Mapping) {
+                    const fromEl = document.getElementById(`vis-source1-${source1Mapping}`);
+                    if(fromEl) drawConnection(svg, fromEl, toEl, '#3b82f6');
+                }
+                if (source2Mapping) {
+                    const fromEl = document.getElementById(`vis-source2-${source2Mapping}`);
+                    if(fromEl) drawConnection(svg, fromEl, toEl, '#10b981');
+                }
+            }
+        }
+
+        /** 绘制单条连接线 */
+        function drawConnection(svg, fromEl, toEl, color) {
+            const containerRect = document.getElementById('mapping-container').getBoundingClientRect();
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+
+            if (fromRect.width === 0 || toRect.width === 0) return;
+
+            let startX, endX, controlX1, controlX2;
+            const startY = fromRect.top + fromRect.height / 2 - containerRect.top;
+            const endY = toRect.top + toRect.height / 2 - containerRect.top;
+            
+            if (fromRect.x < toRect.x) { // 源在左侧
+                startX = fromRect.right - containerRect.left;
+                endX = toRect.left - containerRect.left;
+                controlX1 = startX + 60;
+                controlX2 = endX - 60;
+            } else { // 源在右侧
+                startX = fromRect.left - containerRect.left;
+                endX = toRect.right - containerRect.left;
+                controlX1 = startX - 60;
+                controlX2 = endX + 60;
+            }
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', `M ${startX} ${startY} C ${controlX1} ${startY}, ${controlX2} ${endY}, ${endX} ${endY}`);
+            path.setAttribute('stroke', color);
+            path.classList.add('connector-line');
+            svg.appendChild(path);
+        }
+
+        /** 主合并逻辑 */
+        async function handleMerge() {
+            mergeBtn.disabled = true;
+            mergeBtn.classList.add('disabled-btn');
+            statusEl.textContent = '正在处理...';
+            statusEl.className = 'mt-4 text-yellow-600 h-6 animate-pulse';
+
+            try {
+                // **UPDATED**: Get value from select element
+                const mergeKey = document.getElementById('mergeKeySelect').value;
+                if (!mergeKey) throw new Error('必须指定一个合并主键。');
+
+                const mappingConfig = {};
+                const rows = document.getElementById('mapping-table-body').rows;
+                for (const row of rows) {
+                    mappingConfig[row.cells[0].textContent] = {
+                        source1: row.cells[1].querySelector('select').value,
+                        source2: row.cells[2].querySelector('select').value,
+                        priority: row.cells[3].querySelector('select').value,
+                    };
+                }
+
+                const mergedDataMap = new Map();
+                fileData.source1.forEach(row => {
+                    const key = String(row[mergeKey] || '').trim();
+                    if (key) mergedDataMap.set(key, { source1: row });
+                });
+                fileData.source2.forEach(row => {
+                    const key = String(row[mergeKey] || '').trim();
+                    const existing = mergedDataMap.get(key) || {};
+                    mergedDataMap.set(key, { ...existing, source2: row });
+                });
+                
+                const finalData = [];
+                for (const data of mergedDataMap.values()) {
+                    const newRow = {};
+                    for (const targetHeader of fileHeaders.template) {
+                        const mapping = mappingConfig[targetHeader];
+                        const val1 = data.source1 && mapping.source1 ? data.source1[mapping.source1] : undefined;
+                        const val2 = data.source2 && mapping.source2 ? data.source2[mapping.source2] : undefined;
+                        
+                        let finalValue;
+                        const hasVal1 = val1 !== undefined && val1 !== null && val1 !== '';
+                        const hasVal2 = val2 !== undefined && val2 !== null && val2 !== '';
+
+                        if (mapping.priority === 'source1') {
+                            finalValue = hasVal1 ? val1 : val2;
+                        } else {
+                            finalValue = hasVal2 ? val2 : val1;
+                        }
+                        
+                        newRow[targetHeader] = (finalValue !== undefined && finalValue !== null) ? finalValue : '';
+                    }
+                    finalData.push(newRow);
+                }
+
+                statusEl.textContent = '合并完成，正在生成Excel文件...';
+                const finalWorksheet = XLSX.utils.json_to_sheet(finalData, { header: fileHeaders.template });
+                const finalWorkbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(finalWorkbook, finalWorksheet, '合并结果');
+                XLSX.writeFile(finalWorkbook, 'merged_records_generic.xlsx');
+
+                statusEl.textContent = `处理成功！共合并 ${finalData.length} 条记录。`;
+                statusEl.className = 'mt-4 text-green-600 h-6';
+
+            } catch (error) {
+                console.error(error);
+                statusEl.textContent = `错误: ${error.message}`;
+                statusEl.className = 'mt-4 text-red-600 h-6';
+            } finally {
+                mergeBtn.disabled = false;
+                mergeBtn.classList.remove('disabled-btn');
+                statusEl.classList.remove('animate-pulse');
+            }
+        }
+    </script>
 </body>
 </html>
